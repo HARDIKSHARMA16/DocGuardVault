@@ -23,7 +23,7 @@ This is the frontend of the MedChain Vault project – a secure, blockchain-powe
 
 ---
 
-## ⚡ Getting Started
+## Getting Started
 
 ### 1. **Install dependencies**
 
@@ -39,7 +39,7 @@ npm start
 
 ### 3. **Configuration**
 
-* Ensure your backend API is running at `http://localhost:5000` or update the endpoints in `EMRPage.js` if needed.
+* Ensure your backend API is running at `https://medchainvaultbackend.onrender.com` or update the endpoints in `EMRPage.js` if needed.
 
 ---
 
@@ -57,7 +57,8 @@ npm start
 
 ## Screenshots
 
-> *See `/docs/` or the main project README for UI walkthrough.*
+> <img width="1920" height="751" alt="image" src="https://github.com/user-attachments/assets/988d1cc4-7eac-42ed-8ce9-29446b5fe6ab" />
+
 
 ---
 
