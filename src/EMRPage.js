@@ -183,7 +183,7 @@ function EMRPage() {
       const data = await resp.json();
 
       if (!data || !data.uploader || data.uploader === "0x0000000000000000000000000000000000000000") {
-        setVerifyStatus("Not found on blockchain.");
+        setVerifyStatus("File Tampered!!");
         setVerifyInfo(null);
         return;
       }
