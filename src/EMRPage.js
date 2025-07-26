@@ -202,9 +202,9 @@ function EMRPage() {
     fontWeight: 600,
     color: status.toLowerCase().includes("success") || status.toLowerCase().includes("found")
       ? "#16a34a"
-      : status.toLowerCase().includes("fail") || status.toLowerCase().includes("denied") || status.toLowerCase().includes("not found")
+      : status.toLowerCase().includes("fail") || status.toLowerCase().includes("denied") || status.toLowerCase().includes("not found") || status.toLowerCase().includes("File Tampered!!")
         ? "#dc2626"
-        : "#2e2e2e"
+        : "#bde50dff"
   });
 
   return (
