@@ -64,7 +64,7 @@ function EMRPage() {
     formData.append("signature", signature);
 
     try {
-      const resp = await fetch("https://med-chain-vault-backend.vercel.app/upload", {
+      const resp = await fetch("https://medchainvaultbackend.onrender.com/upload", {
         method: "POST",
         body: formData
       });
@@ -96,7 +96,7 @@ function EMRPage() {
     setVerifyStatus("Searching blockchain...");
 
     try {
-      const resp = await fetch(`https://med-chain-vault-backend.vercel.app/getFile/${hash}`);
+      const resp = await fetch(`https://medchainvaultbackend.onrender.com/getFile/${hash}`);
       const data = await resp.json();
 
       if (!data || !data.uploader || data.uploader === "0x0000000000000000000000000000000000000000") {
