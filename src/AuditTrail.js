@@ -13,7 +13,7 @@ function AuditTrail() {
 
   useEffect(() => {
     setLoading(true);
-    fetch("http://localhost:5000/auditTrail")
+    fetch("https://medchainvaultbackend.onrender.com/auditTrail")
       .then(r => r.json())
       .then(res => {
         if (res.status === "success") setLogs(res.data);
