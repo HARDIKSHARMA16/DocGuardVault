@@ -1,9 +1,39 @@
 import React, { useState } from "react";
 import { ethers } from "ethers";
+import contractJson from "./BlockVault.json"; // Make sure this is the correct ABI path
 import "./App.css";
+
+// ---- CONFIGURATION ----
+const CONTRACT_ADDRESS = "YOUR_DEPLOYED_CONTRACT_ADDRESS"; // <-- PUT YOUR CONTRACT ADDRESS HERE
+const contractABI = contractJson.abi;
 
 const shorten = (addr) => addr ? addr.slice(0, 6) + "..." + addr.slice(-4) : "";
 const formatDate = (ts) => ts ? new Date(ts * 1000).toLocaleString() : "";
+
+// --- On-chain access control helpers ---
+async function getEthersContract() {
+  if (!window.ethereum) throw new Error("MetaMask not detected");
+  await window.ethereum.request({ method: "eth_requestAccounts" });
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  const signer = await provider.getSigner();
+  return new ethers.Contract(CONTRACT_ADDRESS, contractABI, signer);
+}
+async function grantAccess(fileHash, grantee) {
+  const contract = await getEthersContract();
+  const tx = await contract.grantAccess(fileHash, grantee);
+  await tx.wait();
+  return tx.hash;
+}
+async function revokeAccess(fileHash, grantee) {
+  const contract = await getEthersContract();
+  const tx = await contract.revokeAccess(fileHash, grantee);
+  await tx.wait();
+  return tx.hash;
+}
+async function canAccess(fileHash, address) {
+  const contract = await getEthersContract();
+  return await contract.canAccess(fileHash, address);
+}
 
 function EMRPage() {
   const [tab, setTab] = useState("upload");
@@ -51,50 +81,35 @@ function EMRPage() {
     if (next === "audit") loadAuditTrail();
   }
 
-  // --- Access Control Handlers ---
+  // --- New Access Control: on-chain (MetaMask) ---
   async function handleGrantAccess(fileHash) {
     if (!grantAddr) return setAccessStatus("Enter an address!");
     setAccessStatus("Granting...");
     try {
-      const resp = await fetch("https://medchainvaultbackend.onrender.com/grantAccess", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileHash, grantee: grantAddr })
-      });
-      const json = await resp.json();
-      if (json.status === "success") setAccessStatus("Access granted!");
-      else setAccessStatus("Grant failed: " + (json.error || ""));
+      const txhash = await grantAccess(fileHash, grantAddr);
+      setAccessStatus("Access granted! Tx: " + txhash);
     } catch (err) {
-      setAccessStatus("Error: " + err.message);
+      setAccessStatus("Grant failed: " + (err.reason || err.message));
     }
   }
-
   async function handleRevokeAccess(fileHash) {
     if (!grantAddr) return setAccessStatus("Enter address!");
     setAccessStatus("Revoking...");
     try {
-      const resp = await fetch("https://medchainvaultbackend.onrender.com/revokeAccess", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileHash, grantee: grantAddr })
-      });
-      const json = await resp.json();
-      if (json.status === "success") setAccessStatus("Access revoked.");
-      else setAccessStatus("Revoke failed: " + (json.error || ""));
+      const txhash = await revokeAccess(fileHash, grantAddr);
+      setAccessStatus("Access revoked. Tx: " + txhash);
     } catch (err) {
-      setAccessStatus("Error: " + err.message);
+      setAccessStatus("Revoke failed: " + (err.reason || err.message));
     }
   }
-
   async function handleCheckAccess(fileHash) {
     if (!grantAddr) return setCanAccessStatus("Enter address!");
     setCanAccessStatus("Checking...");
     try {
-      const resp = await fetch(`https://medchainvaultbackend.onrender.com/canAccess/${fileHash}/${grantAddr}`);
-      const json = await resp.json();
-      setCanAccessStatus(json.canAccess ? "This address has access." : "No access.");
+      const result = await canAccess(fileHash, grantAddr);
+      setCanAccessStatus(result ? "✅ This address has access." : "❌ No access.");
     } catch (err) {
-      setCanAccessStatus("Error: " + err.message);
+      setCanAccessStatus("Error: " + (err.reason || err.message));
     }
   }
 
@@ -278,7 +293,6 @@ function EMRPage() {
               boxSizing: "border-box"
             }}
           >
-
             <h3 style={{
               color: "#fff",
               marginBottom: 28,
@@ -286,7 +300,6 @@ function EMRPage() {
               fontSize: "1.45rem",
               letterSpacing: "0.5px"
             }}>Audit Trail (All Uploaded Files)</h3>
-
             <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
               {auditTrail.map(ev => (
                 <li key={ev.fileHash}
@@ -352,7 +365,6 @@ function EMRPage() {
                 </li>
               ))}
             </ul>
-
             {/* Access Control Section */}
             {selectedAuditFile && (
               <div style={{
@@ -415,7 +427,6 @@ function EMRPage() {
                 </button>
               </div>
             )}
-
           </div>
         )}
 
