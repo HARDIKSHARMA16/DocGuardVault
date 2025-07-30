@@ -162,7 +162,7 @@ function EMRPage() {
     formData.append("signature", signature);
 
     try {
-      const resp = await fetch("https://medchainvaultbackend.onrender.com/upload", {
+      const resp = await fetch("https://medchainvaultbackend.onrender.com", {
         method: "POST",
         body: formData
       });
