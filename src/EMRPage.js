@@ -31,7 +31,7 @@ function EMRPage() {
     setAuditError("");
     setSelectedAuditFile(null);
     try {
-      const resp = await fetch("http://localhost:5000/auditTrail");
+      const resp = await fetch("https://medchainvaultbackend.onrender.com/auditTrail");
       const json = await resp.json();
       if (json.status === "success") setAuditTrail(json.data);
       else setAuditError(json.error || "Unknown error loading audit.");
@@ -56,7 +56,7 @@ function EMRPage() {
     if (!grantAddr) return setAccessStatus("Enter an address!");
     setAccessStatus("Granting...");
     try {
-      const resp = await fetch("http://localhost:5000/grantAccess", {
+      const resp = await fetch("https://medchainvaultbackend.onrender.com/grantAccess", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fileHash, grantee: grantAddr })
@@ -73,7 +73,7 @@ function EMRPage() {
     if (!grantAddr) return setAccessStatus("Enter address!");
     setAccessStatus("Revoking...");
     try {
-      const resp = await fetch("http://localhost:5000/revokeAccess", {
+      const resp = await fetch("https://medchainvaultbackend.onrender.com/revokeAccess", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fileHash, grantee: grantAddr })
