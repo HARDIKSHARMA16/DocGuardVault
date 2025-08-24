@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ethers } from "ethers";
-import contractJson from "./BlockVault.json"; // Make sure this is the correct ABI path
+// import contractJson from "./BlockVault.json"; // Make sure this is the correct ABI path
 import "./App.css";
 
 // ---- CONFIGURATION ----
@@ -225,13 +225,13 @@ function EMRPage() {
   return (
     <div className="app">
       <div className="container">
-        <h2 className="title">MedChain Vault</h2>
+        <h2 className="title">DocGuard Vault</h2>
         <div className="tab-switcher">
           <button className={tab === "upload" ? "tab active" : "tab"} onClick={() => switchTab("upload")}>
-            Upload EMR
+            Upload File
           </button>
           <button className={tab === "verify" ? "tab active" : "tab"} onClick={() => switchTab("verify")}>
-            Verify EMR
+            Verify File
           </button>
           <button className={tab === "audit" ? "tab active" : "tab"} onClick={() => switchTab("audit")}>Audit Trail</button>
         </div>
@@ -433,21 +433,6 @@ function EMRPage() {
       </div>
       <Footer />
     </div>
-  );
-}
-
-function Footer() {
-  return (
-    <footer style={{
-      marginTop: 40,
-      fontSize: 16,
-      color: "#95a5b6",
-      textAlign: "center",
-      fontWeight: 500,
-      letterSpacing: "0.5px"
-    }}>
-      &copy; {new Date().getFullYear()} Hack Demons
-    </footer>
   );
 }
 
