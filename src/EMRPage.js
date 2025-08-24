@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ethers } from "ethers";
-// import contractJson from "./BlockVault.json"; // Make sure this is the correct ABI path
+import contractJson from "./BlockVault.json"; // Make sure this is the correct ABI path
 import "./App.css";
 
 // ---- CONFIGURATION ----
@@ -431,7 +431,7 @@ function EMRPage() {
         )}
 
       </div>
-      <Footer />
+      
     </div>
   );
 }
