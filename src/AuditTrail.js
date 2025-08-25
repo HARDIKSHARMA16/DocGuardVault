@@ -1,109 +1,99 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import "./App.css";
 
-const shortAddr = addr =>
-  addr ? addr.slice(0, 6) + "..." + addr.slice(-4) : "";
-const formatDate = ts =>
-  ts ? new Date(ts * 1000).toLocaleString() : "";
-
 function AuditTrail() {
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState("");
+  // Sample state (in real app, this will come from blockchain/IPFS API)
+  const [files, setFiles] = useState([
+    {
+      name: "File1.png",
+      ipfsHash: "Qm123456789",
+      url: "https://ipfs.io/ipfs/Qm123456789",
+    },
+    {
+      name: "Report.pdf",
+      ipfsHash: "Qm987654321",
+      url: "https://ipfs.io/ipfs/Qm987654321",
+    },
+  ]);
 
-  useEffect(() => {
-    setLoading(true);
-    fetch("https://medchainvaultbackend.onrender.com/auditTrail")
-      .then(r => r.json())
-      .then(res => {
-        if (res.status === "success") setLogs(res.data);
-        else setErr(res.error || "Failed to load audit trail");
-        setLoading(false);
-      })
-      .catch(e => {
-        setErr(e.message);
-        setLoading(false);
-      });
-  }, []);
+  // Function to delete file (logical delete)
+  const handleDelete = (hash) => {
+    const updatedFiles = files.filter((file) => file.ipfsHash !== hash);
+    setFiles(updatedFiles);
+  };
 
   return (
-    <div className="container" style={{ marginTop: "32px" }}>
-      <h2 style={{ fontSize: "2rem", marginBottom: 24 }}>Audit Trail</h2>
-      {loading && <div className="status">Loading...</div>}
-      {err && (
-        <div className="status" style={{ color: "red", fontWeight: 600 }}>
-          {err}
-        </div>
-      )}
-      {!loading && !err && (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: "#11182e", color: "#94f4eb" }}>
-                <th>#</th>
-                <th>File Hash</th>
-                <th>Uploader</th>
-                <th>IPFS CID</th>
-                <th>Signature</th>
-                <th>Timestamp</th>
-                <th>Tx</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.length === 0 && (
-                <tr>
-                  <td colSpan="7" style={{ color: "#888" }}>
-                    No uploads yet.
-                  </td>
-                </tr>
-              )}
-              {logs.map((log, idx) => (
-                <tr key={log.txHash}>
-                  <td>{idx + 1}</td>
-                  <td style={{ fontFamily: "monospace" }}>{log.fileHash.slice(0, 8) + "..."}</td>
-                  <td>
-                    <a
-                      href={`https://amoy.polygonscan.com/address/${log.uploader}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: "#8ecae6", textDecoration: "none" }}
-                    >
-                      {shortAddr(log.uploader)}
-                    </a>
-                  </td>
-                  <td>
-                    <a
-                      href={`https://ipfs.io/ipfs/${log.ipfsCID}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: "#f5a623" }}
-                    >
-                      {log.ipfsCID.slice(0, 8)}...
-                    </a>
-                  </td>
-                  <td style={{ fontFamily: "monospace", fontSize: "0.82em" }}>
-                    {log.signature.slice(0, 8)}...
-                  </td>
-                  <td>{formatDate(log.timestamp)}</td>
-                  <td>
-                    <a
-                      href={`https://amoy.polygonscan.com/tx/${log.txHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: "#77dd77" }}
-                    >
-                      View
-                    </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <footer style={{ marginbottom: 32, color: "#aaa", fontSize: "16px", textAlign: "center" }}>
-        &copy; {new Date().getFullYear()} Team Hack Demons
-      </footer>
+    <div className="app">
+      <div className="container">
+        <h2 className="title" style={{ marginBottom: "20px" }}>
+          Audit Trail
+        </h2>
+
+        {files.length === 0 ? (
+          <p style={{ color: "#cbd5e1" }}>No files uploaded yet.</p>
+        ) : (
+          <div style={{ display: "grid", gap: "20px" }}>
+            {files.map((file) => (
+              <div
+                key={file.ipfsHash}
+                style={{
+                  background: "#1e293b",
+                  padding: "16px",
+                  borderRadius: "12px",
+                  boxShadow: "0px 4px 12px rgba(0,0,0,0.3)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <p style={{ color: "#e2e8f0", marginBottom: "8px" }}>
+                    <strong>{file.name}</strong>
+                  </p>
+                  <a
+                    href={file.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "#38bdf8",
+                      fontSize: "14px",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    View on IPFS
+                  </a>
+                </div>
+
+                {/* Delete Button */}
+                <button
+                  onClick={() => handleDelete(file.ipfsHash)}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: "600",
+                    color: "white",
+                    background: "linear-gradient(90deg, #ff5f6d, #ffc371)",
+                    boxShadow: "0px 4px 12px rgba(255, 95, 109, 0.4)",
+                    transition: "all 0.3s ease-in-out",
+                  }}
+                  onMouseOver={(e) =>
+                    (e.target.style.background =
+                      "linear-gradient(90deg, #ff416c, #ff4b2b)")
+                  }
+                  onMouseOut={(e) =>
+                    (e.target.style.background =
+                      "linear-gradient(90deg, #ff5f6d, #ffc371)")
+                  }
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
