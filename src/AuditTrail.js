@@ -1,26 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "./App.css";
 
-function AuditTrail() {
-  // Sample state (in real app, this will come from blockchain/IPFS API)
-  const [files, setFiles] = useState([
-    {
-      name: "File1.png",
-      ipfsHash: "Qm123456789",
-      url: "https://ipfs.io/ipfs/Qm123456789",
-    },
-    {
-      name: "Report.pdf",
-      ipfsHash: "Qm987654321",
-      url: "https://ipfs.io/ipfs/Qm987654321",
-    },
-  ]);
+const shorten = (addr) =>
+  addr ? addr.slice(0, 6) + "..." + addr.slice(-4) : "";
+const formatDate = (ts) => (ts ? new Date(ts * 1000).toLocaleString() : "");
 
-  // Function to delete file (logical delete)
-  const handleDelete = (hash) => {
-    const updatedFiles = files.filter((file) => file.ipfsHash !== hash);
-    setFiles(updatedFiles);
+function AuditTrail() {
+  const navigate = useNavigate();
+  const [auditTrail, setAuditTrail] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Load audit trail data from backend
+  const loadAuditTrail = async () => {
+    setAuditTrail([]);
+    setLoading(true);
+    setError("");
+    try {
+      const resp = await fetch("https://docguardvault-backend.onrender.com/auditTrail");
+      const text = await resp.text();
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        throw new Error("Server returned non-JSON response:\n" + text);
+      }
+      if (json.status === "success") {
+        setAuditTrail(json.data);
+      } else {
+        setError(json.error || "Unknown error loading audit trail.");
+      }
+    } catch (e) {
+      setError("Error fetching audit trail: " + e.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Load data on component mount
+  useEffect(() => {
+    loadAuditTrail();
+  }, []);
 
   return (
     <div className="app">
