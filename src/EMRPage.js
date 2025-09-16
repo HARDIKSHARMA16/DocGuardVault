@@ -29,7 +29,7 @@ function EMRPage() {
     setAuditLoading(true);
     setAuditError("");
     try {
-      const resp = await fetch("https://medchainvaultbackend.onrender.com/auditTrail");
+      const resp = await fetch("https://docguardvault-backend.onrender.com/auditTrail");
       const text = await resp.text();
       let json;
       try {
@@ -103,7 +103,7 @@ function EMRPage() {
     formData.append("signature", signature);
 
     try {
-      const resp = await fetch("https://medchainvaultbackend.onrender.com/upload", {
+      const resp = await fetch("https://docguardvault-backend.onrender.com/upload", {
         method: "POST",
         body: formData,
       });
@@ -136,7 +136,7 @@ function EMRPage() {
     setVerifyStatus("Searching blockchain...");
 
     try {
-      const resp = await fetch(`https://medchainvaultbackend.onrender.com/getFile/${hash}`);
+      const resp = await fetch(`https://docguardvault-backend.onrender.com/getFile/${hash}`);
       const text = await resp.text();
       let data;
       try {
