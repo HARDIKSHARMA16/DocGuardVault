@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ethers } from "ethers";
 import contractJson from "./BlockVault.json";
+import LocationCapture from "./LocationCapture";
 import "./App.css";
 
 const CONTRACT_ADDRESS = "YOUR_DEPLOYED_CONTRACT_ADDRESS";
@@ -22,6 +23,12 @@ function EMRPage() {
   const [auditTrail, setAuditTrail] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState("");
+  
+  // Location-related state
+  const [uploadLocation, setUploadLocation] = useState(null);
+  const [hasLocationLock, setHasLocationLock] = useState(false);
+  const [locationRadius, setLocationRadius] = useState(100);
+  const [verifyLocation, setVerifyLocation] = useState(null);
 
   // --- Fetch audit trail ---
   const loadAuditTrail = async () => {
@@ -29,7 +36,7 @@ function EMRPage() {
     setAuditLoading(true);
     setAuditError("");
     try {
-      const resp = await fetch("https://docguardvault-backend.onrender.com/auditTrail");
+      const resp = await fetch("http://localhost:5002/auditTrail");
       const text = await resp.text();
       let json;
       try {
@@ -66,12 +73,16 @@ function EMRPage() {
     setSelectedFile(e.target.files[0]);
     setUploadStatus("");
     setTxHash("");
+    // Reset location when file changes
+    setUploadLocation(null);
+    setHasLocationLock(false);
   };
 
   const handleVerifyChange = (e) => {
     setVerifyFile(e.target.files[0]);
     setVerifyStatus("");
     setVerifyInfo(null);
+    setVerifyLocation(null);
   };
 
   async function handleUpload(e) {
@@ -101,9 +112,16 @@ function EMRPage() {
     formData.append("file", selectedFile);
     formData.append("walletAddress", wallet);
     formData.append("signature", signature);
+    formData.append("fileHash", hash); // Send the file hash
+    formData.append("hasLocationLock", hasLocationLock.toString());
+    if (uploadLocation) {
+      formData.append("latitude", uploadLocation.latitude.toString());
+      formData.append("longitude", uploadLocation.longitude.toString());
+      formData.append("radius", locationRadius.toString());
+    }
 
     try {
-      const resp = await fetch("https://docguardvault-backend.onrender.com/upload", {
+      const resp = await fetch("http://localhost:5002/upload", {
         method: "POST",
         body: formData,
       });
@@ -136,7 +154,7 @@ function EMRPage() {
     setVerifyStatus("Searching blockchain...");
 
     try {
-      const resp = await fetch(`https://docguardvault-backend.onrender.com/getFile/${hash}`);
+      const resp = await fetch(`http://localhost:5002/getFile/${hash}`);
       const text = await resp.text();
       let data;
       try {
@@ -151,8 +169,61 @@ function EMRPage() {
         return;
       }
 
-      setVerifyStatus("File found!");
-      setVerifyInfo({ ...data, hash });
+      // Check if file has location lock
+      if (data.hasLocationLock) {
+        setVerifyStatus("File has location lock. Capturing your location...");
+        
+        // Get user's current location
+        if (!navigator.geolocation) {
+          setVerifyStatus("Location verification failed: Geolocation not supported");
+          setVerifyInfo(null);
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const userLocation = {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            };
+            setVerifyLocation(userLocation);
+
+            // Verify location with backend
+            try {
+              const locationResp = await fetch("http://localhost:5002/verifyLocation", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  fileHash: hash,
+                  latitude: userLocation.latitude,
+                  longitude: userLocation.longitude
+                })
+              });
+
+              const locationData = await locationResp.json();
+              
+              if (locationData.isValidLocation) {
+                setVerifyStatus("File found and location verified!");
+                setVerifyInfo({ ...data, hash, locationVerified: true, userLocation });
+              } else {
+                setVerifyStatus("File found but location verification failed!");
+                setVerifyInfo({ ...data, hash, locationVerified: false, userLocation });
+              }
+            } catch (locationErr) {
+              setVerifyStatus("File found but location verification failed: " + locationErr.message);
+              setVerifyInfo({ ...data, hash, locationVerified: false, userLocation });
+            }
+          },
+          (error) => {
+            setVerifyStatus("File found but location access denied. Cannot verify location lock.");
+            setVerifyInfo({ ...data, hash, locationVerified: false });
+          },
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      } else {
+        setVerifyStatus("File found!");
+        setVerifyInfo({ ...data, hash, locationVerified: null });
+      }
     } catch (err) {
       setVerifyStatus("Verification failed: " + err.message);
       setVerifyInfo(null);
@@ -193,7 +264,88 @@ function EMRPage() {
           <div className="panel">
             <form onSubmit={handleUpload} className="stack">
               <input type="file" onChange={handleFileChange} />
-              <button type="submit" className="action-btn">
+              
+              {/* Location Lock Toggle */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '12px', 
+                marginTop: '12px',
+                padding: '12px',
+                background: 'rgba(15, 23, 42, 0.5)',
+                borderRadius: '8px',
+                border: '1px solid rgba(148, 163, 184, 0.2)'
+              }}>
+                <input
+                  type="checkbox"
+                  id="locationLock"
+                  checked={hasLocationLock}
+                  onChange={(e) => setHasLocationLock(e.target.checked)}
+                  style={{ transform: 'scale(1.2)' }}
+                />
+                <label htmlFor="locationLock" style={{ 
+                  color: '#e2e8f0', 
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}>
+                  🔒 Enable Location Lock
+                </label>
+              </div>
+
+              {/* Location Capture Component */}
+              {hasLocationLock && (
+                <LocationCapture
+                  onLocationChange={setUploadLocation}
+                  disabled={!selectedFile}
+                />
+              )}
+
+              {/* Radius Setting */}
+              {hasLocationLock && uploadLocation && (
+                <div style={{ 
+                  marginTop: '12px',
+                  padding: '12px',
+                  background: 'rgba(15, 23, 42, 0.5)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(148, 163, 184, 0.2)'
+                }}>
+                  <label style={{ 
+                    color: '#e2e8f0', 
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    display: 'block',
+                    marginBottom: '8px'
+                  }}>
+                    📏 Verification Radius (meters):
+                  </label>
+                  <input
+                    type="range"
+                    min="10"
+                    max="1000"
+                    value={locationRadius}
+                    onChange={(e) => setLocationRadius(parseInt(e.target.value))}
+                    style={{ width: '100%', marginBottom: '8px' }}
+                  />
+                  <div style={{ 
+                    color: '#6b7280', 
+                    fontSize: '12px',
+                    textAlign: 'center'
+                  }}>
+                    {locationRadius}m radius
+                  </div>
+                </div>
+              )}
+
+              <button 
+                type="submit" 
+                className="action-btn"
+                disabled={hasLocationLock && !uploadLocation}
+                style={{
+                  opacity: hasLocationLock && !uploadLocation ? 0.6 : 1,
+                  cursor: hasLocationLock && !uploadLocation ? 'not-allowed' : 'pointer'
+                }}
+              >
                 Upload & Log to Blockchain
               </button>
             </form>
@@ -260,6 +412,58 @@ function EMRPage() {
                 <div>
                   <b>Timestamp:</b> {formatDate(verifyInfo.timestamp)}
                 </div>
+                
+                {/* Location Information */}
+                {verifyInfo.hasLocationLock !== undefined && (
+                  <div style={{ 
+                    marginTop: '16px', 
+                    padding: '12px', 
+                    background: 'rgba(15, 23, 42, 0.7)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(148, 163, 184, 0.2)'
+                  }}>
+                    <div style={{ 
+                      color: '#e2e8f0', 
+                      fontWeight: '600', 
+                      marginBottom: '8px',
+                      fontSize: '14px'
+                    }}>
+                      📍 Location Lock Status:
+                    </div>
+                    
+                    {verifyInfo.hasLocationLock ? (
+                      <div>
+                        <div style={{ 
+                          color: verifyInfo.locationVerified === true ? '#10b981' : 
+                                 verifyInfo.locationVerified === false ? '#ef4444' : '#6b7280',
+                          fontSize: '14px',
+                          marginBottom: '8px'
+                        }}>
+                          {verifyInfo.locationVerified === true ? '✅ Location Verified' :
+                           verifyInfo.locationVerified === false ? '❌ Location Verification Failed' :
+                           '⏳ Location verification required'}
+                        </div>
+                        
+                        {verifyInfo.userLocation && (
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                            Your location: {verifyInfo.userLocation.latitude.toFixed(6)}, {verifyInfo.userLocation.longitude.toFixed(6)}
+                          </div>
+                        )}
+                        
+                        {verifyInfo.latitude && verifyInfo.longitude && (
+                          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                            Required location: {verifyInfo.latitude.toFixed(6)}, {verifyInfo.longitude.toFixed(6)}
+                            {verifyInfo.radius && ` (±${verifyInfo.radius}m)`}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ color: '#6b7280', fontSize: '14px' }}>
+                        🔓 No location lock (standard verification)
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -326,6 +530,21 @@ function EMRPage() {
                     >
                       IPFS
                     </a>
+                    {ev.hasLocationLock && (
+                      <div style={{ 
+                        marginTop: '8px', 
+                        fontSize: '12px', 
+                        color: '#fbbf24',
+                        fontWeight: '500'
+                      }}>
+                        🔒 Location Locked
+                        {ev.latitude && ev.longitude && (
+                          <span style={{ color: '#6b7280', marginLeft: '4px' }}>
+                            ({ev.latitude.toFixed(4)}, {ev.longitude.toFixed(4)})
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}
