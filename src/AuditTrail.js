@@ -18,7 +18,7 @@ function AuditTrail() {
     setLoading(true);
     setError("");
     try {
-      const resp = await fetch("https://docguardvault-backend.onrender.com/auditTrail");
+      const resp = await fetch("http://localhost:5002/auditTrail");
       const text = await resp.text();
       let json;
       try {
@@ -50,29 +50,35 @@ function AuditTrail() {
           Audit Trail
         </h2>
 
-        {files.length === 0 ? (
+        {loading && <p style={{ color: "#cbd5e1" }}>Loading...</p>}
+        {error && <p style={{ color: "#ef4444" }}>{error}</p>}
+
+        {!loading && !error && auditTrail.length === 0 ? (
           <p style={{ color: "#cbd5e1" }}>No files uploaded yet.</p>
         ) : (
           <div style={{ display: "grid", gap: "20px" }}>
-            {files.map((file) => (
+            {auditTrail.map((ev) => (
               <div
-                key={file.ipfsHash}
+                key={ev.fileHash}
                 style={{
                   background: "#1e293b",
                   padding: "16px",
                   borderRadius: "12px",
                   boxShadow: "0px 4px 12px rgba(0,0,0,0.3)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
                 }}
               >
                 <div>
                   <p style={{ color: "#e2e8f0", marginBottom: "8px" }}>
-                    <strong>{file.name}</strong>
+                    <strong>File Hash:</strong> {shorten(ev.fileHash)}
+                  </p>
+                  <p style={{ color: "#e2e8f0", marginBottom: "8px" }}>
+                    <strong>Uploader:</strong> {shorten(ev.uploader)}
+                  </p>
+                  <p style={{ color: "#e2e8f0", marginBottom: "8px" }}>
+                    <strong>Time:</strong> {formatDate(ev.timestamp)}
                   </p>
                   <a
-                    href={file.url}
+                    href={`https://ipfs.io/ipfs/${ev.ipfsCID}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
@@ -83,33 +89,22 @@ function AuditTrail() {
                   >
                     View on IPFS
                   </a>
+                  {ev.hasLocationLock && (
+                    <div style={{ 
+                      marginTop: '8px', 
+                      fontSize: '12px', 
+                      color: '#fbbf24',
+                      fontWeight: '500'
+                    }}>
+                      🔒 Location Locked
+                      {ev.latitude && ev.longitude && (
+                        <span style={{ color: '#6b7280', marginLeft: '4px' }}>
+                          ({ev.latitude.toFixed(4)}, {ev.longitude.toFixed(4)})
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
-
-                {/* Delete Button */}
-                <button
-                  onClick={() => handleDelete(file.ipfsHash)}
-                  style={{
-                    padding: "10px 20px",
-                    borderRadius: "8px",
-                    border: "none",
-                    cursor: "pointer",
-                    fontWeight: "600",
-                    color: "white",
-                    background: "linear-gradient(90deg, #ff5f6d, #ffc371)",
-                    boxShadow: "0px 4px 12px rgba(255, 95, 109, 0.4)",
-                    transition: "all 0.3s ease-in-out",
-                  }}
-                  onMouseOver={(e) =>
-                    (e.target.style.background =
-                      "linear-gradient(90deg, #ff416c, #ff4b2b)")
-                  }
-                  onMouseOut={(e) =>
-                    (e.target.style.background =
-                      "linear-gradient(90deg, #ff5f6d, #ffc371)")
-                  }
-                >
-                  Delete
-                </button>
               </div>
             ))}
           </div>
